@@ -1,5 +1,5 @@
-
 import UIKit
+import WebKit
 
 /**
  Nativo's custom Prebid renderer
@@ -76,7 +76,7 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
             DispatchQueue.main.async {
                 self.expandFullWidth(bannerView)
                 self.expandFullHeight(bannerView)
-                self.expandView(view, to: bannerView, withMinimum:bid.size.height)
+                self.expandChildren(view, to: bannerView, withMinimum:bid.size.height)
             }
         }
     }
@@ -94,68 +94,71 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
     
     // MARK: - Private functions
     
-    private func expandFullWidth(_ parentView: UIView) {
-        // Remove any constraints we don't need
-        let parentContraints = parentView.constraints
-        let widthConstraints = parentContraints.filter({ constraint in
-            (constraint.firstItem as? UIView) === parentView && constraint.firstAttribute == .width
-            || (constraint.secondItem as? UIView) === parentView && constraint.secondAttribute == .width
-        })
-        NSLayoutConstraint.deactivate(widthConstraints)
-        
-        // Allow BannerView to expand to the full width of its parent
-        if let grandParentView = parentView.superview {
-            parentView.widthAnchor.constraint(equalTo: grandParentView.widthAnchor).isActive = true
+    private func expandFullWidth(_ view: UIView) {
+        if let parentView = view.superview {
+            // Remove any constraints we don't need
+            let constraints = parentView.constraints
+            let widthConstraints = constraints.filter({ constraint in
+                (constraint.firstItem as? UIView) === view && constraint.firstAttribute == .width
+                || (constraint.secondItem as? UIView) === view && constraint.secondAttribute == .width
+            })
+            NSLayoutConstraint.deactivate(widthConstraints)
+            
+            view.widthAnchor.constraint(equalTo: parentView.widthAnchor).isActive = true
         }
     }
     
-    private func expandFullHeight(_ parentView: UIView) {
-        // Remove any constraints we don't need
-        let parentConstraints = parentView.constraints
-        let heightConstraints = parentConstraints.filter({ constraint in
-            (constraint.firstItem as? UIView) === parentView && constraint.firstAttribute == .height
-            || (constraint.secondItem as? UIView) === parentView && constraint.secondAttribute == .height
-        })
-        NSLayoutConstraint.deactivate(heightConstraints)
-        
-        // Allow displayView to expand to the full height of its parent
-        if let grandParentView = parentView.superview {
-            parentView.heightAnchor.constraint(equalTo: grandParentView.heightAnchor).isActive = true
+    private func expandFullHeight(_ view: UIView) {
+        if let parentView = view.superview {
+            // Remove any constraints we don't need
+            let constraints = parentView.constraints
+            let heightConstraints = constraints.filter({ constraint in
+                (constraint.firstItem as? UIView) === view && constraint.firstAttribute == .height
+                || (constraint.secondItem as? UIView) === view && constraint.secondAttribute == .height
+            })
+            NSLayoutConstraint.deactivate(heightConstraints)
+            
+            view.heightAnchor.constraint(equalTo: parentView.heightAnchor).isActive = true
         }
     }
     
-    private func expandView(_ view: UIView, to parentView: UIView, withMinimum height: CGFloat) {
-        let displayWidth = view.widthAnchor.constraint(equalTo: parentView.widthAnchor)
-        let displayHeight = view.heightAnchor.constraint(equalTo: parentView.heightAnchor)
-        let displayMinHeight = view.heightAnchor.constraint(greaterThanOrEqualToConstant: height)
-        let displayCenterX = view.centerXAnchor.constraint(equalTo:parentView.centerXAnchor)
-        let displayCenterY = view.centerYAnchor.constraint(equalTo: parentView.centerYAnchor)
-        displayHeight.priority = .defaultHigh
-        displayCenterX.priority = .defaultHigh
-        displayCenterY.priority = .defaultHigh
+    private func expandChildren(_ view: UIView, to parentView: UIView, withMinimum height: CGFloat) {
+        let minHeight = view.heightAnchor.constraint(greaterThanOrEqualToConstant: height)
+        let width = view.widthAnchor.constraint(equalTo: parentView.widthAnchor)
+        let height = view.heightAnchor.constraint(equalTo: parentView.heightAnchor)
+        height.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            displayWidth,
-            displayHeight,
-            displayMinHeight,
-            displayCenterX,
-            displayCenterY
+            width,
+            height,
+            minHeight
         ])
         
-        // Allow the inner web view to expand to the full width of its parent
-        if let pbmWebView = view.subviews.first {
-            NSLayoutConstraint.activate([
-                pbmWebView.widthAnchor.constraint(equalTo: view.widthAnchor),
-                pbmWebView.heightAnchor.constraint(equalTo: view.heightAnchor)
-            ])
-        } else {
+        guard let childView = view.subviews.first else {
             let error = NSError(
-                domain: "NativoPrebidRenderer",
-                code: 1,
+                domain: "NativoPrebidRenderer", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "Nativo renderer expected a subview on DisplayView, but none was found."]
             )
             print("\(error)")
+            return
+        }
+        
+        walkFirstChildChain(from: childView, stopAtType: WKWebView.self) { subview in
+            expandFullWidth(subview)
+            expandFullHeight(subview)
         }
     }
     
+    private func walkFirstChildChain<T: UIView>(
+        from view: UIView,
+        stopAtType: T.Type,
+        withAction: (UIView) -> Void
+    ) {
+        var current: UIView? = view
+        while let v = current {
+            withAction(v)
+            if v.subviews.first is T { break }
+            current = v.subviews.first
+        }
+    }
 }
 
