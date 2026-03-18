@@ -7,11 +7,11 @@
   http://www.apache.org/licenses/LICENSE-2.0
  
   Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-  */
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
 
 import UIKit
 
@@ -369,13 +369,27 @@ public class BannerView:
                 oldDeployedView.removeFromSuperview()
             } else {
                 self.addSubview(view)
-            }
+            }            
+            self.notifyRendererDidInjectView(view)
             
             self.installDeployedViewConstraints(view: view)
             self.deployedView = view
             if let displayView = self.deployedView as? DisplayView {
                 displayView.videoPlaybackDelegate = self
+            } 
+        }
+    }
+    
+    private func reportNativoLoadingSuccess(with size: CGSize) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let delegate = self.delegate,
+                  delegate.responds(to: #selector(BannerViewDelegate.bannerView(_:didReceiveNativoAdWithSize:)))
+            else {
+                self?.reportLoadingSuccess(with: size)
+                return
             }
+            delegate.bannerView?(self, didReceiveNativoAdWithSize: size)
         }
     }
     
@@ -405,6 +419,7 @@ public class BannerView:
         }
     }
     
+    // TODO: GAM requires banners to be fixed size. Why not set Banner view size to parent, and inner DisplayView to hard coded size?
     private func installDeployedViewConstraints(view: UIView) {
         view.translatesAutoresizingMaskIntoConstraints = false
         
@@ -419,6 +434,23 @@ public class BannerView:
         centerY.priority = .defaultHigh
         
         NSLayoutConstraint.activate([widthConstraint, heightConstraint, centerX, centerY])
+    }
+    
+    // MARK: Renderer notification
+    
+    private func notifyRendererDidInjectView(_ injectedView: UIView) {
+        guard let bid = lastBidResponse?.winningBid else {
+            print("Failed to find last bid. Skipped final rendering phase.")
+            return
+        }
+        
+        let plugin: any PrebidMobilePluginRenderer = PrebidMobilePluginRegister.shared.getPluginForPreferredRenderer(bid: bid)
+        
+        // Notify plugin if it implements this method
+        let selector = NSSelectorFromString("didInjectView:into:")
+        if (plugin as AnyObject).responds(to: selector) {
+            (plugin as AnyObject).perform(selector, with: injectedView, with: self)
+        }
     }
 }
 
@@ -456,7 +488,13 @@ extension BannerView : AdLoadFlowControllerDelegate, BannerAdLoaderDelegate {
         adSize: CGSize
     ) {
         deployView(adView)
-        reportLoadingSuccess(with: adSize)
+        
+        // If Nativo provided the winning bid/response for this load, invoke the dedicated callback and suppress the generic one.
+        if let response = adLoadFlowController?.bidResponse, (response is NativoBidResponse) {
+            reportNativoLoadingSuccess(with: adSize)
+        } else {
+            reportLoadingSuccess(with: adSize)
+        }
     }
 }
 
