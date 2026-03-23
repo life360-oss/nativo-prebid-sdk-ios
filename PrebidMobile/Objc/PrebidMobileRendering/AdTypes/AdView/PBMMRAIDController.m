@@ -187,13 +187,13 @@
 
         PBMMRAIDState *prevState = self.prebidWebView.mraidState;
         [self.prebidWebView updateMRAIDLayoutInfoWithForceNotification:NO];
-        if ([prevState isEqual:PBMMRAIDState.expanded] || [prevState isEqual:PBMMRAIDState.resized]) {
+        if (self.isTwoPartExpand && ([prevState isEqual:PBMMRAIDState.expanded] || [prevState isEqual:PBMMRAIDState.resized])) {
             self.delayedMraidState = PBMMRAIDState.defaultState;
+            // Force exposure check to keep MRAID states in sync.
+            [self.prebidWebView forceExposureCheck];
         } else {
             [self.prebidWebView changeToMRAIDState:(isInterstitial ? PBMMRAIDState.hidden : PBMMRAIDState.defaultState)];
         }
-
-        
         // Notify Mraid Collapsed *after* the state has changed and Only if we were Expanded.
         if ([prevState isEqual:PBMMRAIDState.expanded]) {
             self.mraidState = PBMMRAIDState.defaultState;
@@ -307,10 +307,12 @@
         
         BOOL const shouldReplace = (self.dismissResizedModalState != nil);
         
-        //Check whether we are expanding existing content or expanding to a specific URL.
+        // Check whether we are performing MRAID one-part (expanding existing content)
+        // or two-part expand (expanding to a specific URL)
         NSString *strExpandURL = [[command.arguments firstObject] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
         if (strExpandURL && ![strExpandURL isEqualToString:@""]) {
-            //Epanding to a URL
+            // MRAID two-part expand (Expanding to a URL)
+            self.isTwoPartExpand = YES;
             NSURL *expandURL = [NSURL PBMURLWithoutEncodingFromString:strExpandURL];
             if (!expandURL) {
                 PBMLogError(@"Could not create expand url to: %@", strExpandURL);
@@ -344,13 +346,15 @@
                 
                 // ALSO set the first part (banner) to Expanded per MRAID spec
                 self.delayedMraidState = PBMMRAIDState.expanded;
+                [self.prebidWebView forceExposureCheck];
 
                 [newWebView prepareForMRAIDWithRootViewController:self.viewControllerForPresentingModals];
                 [self.creative.modalManager.modalViewController addFriendlyObstructionsToMeasurementSession:self.creative.transaction.measurementSession];
             }];
         }
         else {
-            //Expand existing content.
+            // MRAID one-part expand (Expanding existing content)
+            self.isTwoPartExpand = NO;
             @weakify(self);
             id<PBMModalState> pbmModalState = [PBMFactory createModalStateWithView:webView
                                                                    adConfiguration:self.creative.creativeModel.adConfiguration
@@ -358,14 +362,26 @@
                                                                 onStatePopFinished:^(id<PBMModalState> _Nonnull poppedState) {
                 @strongify(self);
                 if (!self) { return; }
-                
+
                 [self modalManagerDidFinishPop:poppedState];
+                // Force an exposure check to keep state in sync
+                [self.prebidWebView forceExposureCheck];
             } onStateHasLeftApp:^(id<PBMModalState> _Nonnull leavingState) {
                 @strongify(self);
                 if (!self) { return; }
-                
+
                 [self modalManagerDidLeaveApp:leavingState];
             } nextOnStatePopFinished:nil nextOnStateHasLeftApp:nil onModalPushedBlock:nil];
+
+            // Re-implant the webview into its original banner container *before* the modal
+            // dismiss animation starts. This prevents a blank-frame blink caused by the
+            // container being empty while the modal is fading out.
+            pbmModalState.onStateWillPop = ^(id<PBMModalState> _Nonnull poppedState) {
+                @strongify(self);
+                if (!self) { return; }
+                [self.creativeViewDelegate creativeReadyToReimplant:self.creative];
+                [self updateForClose:self.creative.creativeModel.adConfiguration.presentAsInterstitial];
+            };
             
             self.dismissExpandedModalState = [self.creative.modalManager pushModal:pbmModalState fromRootViewController:self.viewControllerForPresentingModals animated:YES shouldReplace:shouldReplace completionHandler:^{
                 @strongify(self);
