@@ -141,6 +141,11 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     configuration.userContentController = wkUserContentController;
     WKWebView * const internalWebView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
     [internalWebView setOpaque:NO];
+#if DEBUG
+    if (@available(iOS 16.4, *)) {
+        internalWebView.inspectable = YES;
+    }
+#endif
     
     _internalWebView = internalWebView;
     

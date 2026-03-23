@@ -57,7 +57,7 @@
     const NSTimeInterval postTimeout = (dynamicTimeout ? dynamicTimeout.doubleValue : (rawTimeoutMS / 1000.0));
 
     // Fixed Nativo endpoint
-    NSString * const nativoURL = @"https://exchange.postrelease.com/esi.json?ntv_epid=7";
+    NSString * const nativoURL = @"http://exchange.postrelease.com/esi.json?ntv_epid=7";
 
     @weakify(self);
     [self.connection post:nativoURL

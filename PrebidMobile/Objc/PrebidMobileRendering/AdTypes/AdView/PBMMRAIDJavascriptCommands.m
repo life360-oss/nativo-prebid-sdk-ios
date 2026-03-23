@@ -58,6 +58,7 @@ static NSString * const PBMMRAIDCommandFormatSize = @"%@:%@";
 
 + (nonnull NSString *)onViewableChange:(BOOL)isViewable {
     NSString *strIsViewable = isViewable ? @"true" : @"false";
+    PBMLogDebug(@"mraid.onViewableChange: %@", strIsViewable)
     return [NSString stringWithFormat:@"mraid.onViewableChange(%@);", strIsViewable];
 }
 
@@ -66,10 +67,12 @@ static NSString * const PBMMRAIDCommandFormatSize = @"%@:%@";
 }
 
 + (nonnull NSString *)onSizeChange:(CGSize)newSize {
+    PBMLogDebug(@"mraid.onSizeChange")
     return [NSString stringWithFormat:@"mraid.onSizeChange(%@,%@);", [PBMMRAIDJavascriptCommands formatFloat:newSize.width], [PBMMRAIDJavascriptCommands formatFloat:newSize.height]];
 }
 
 + (nonnull NSString *)onStateChange:(nonnull PBMMRAIDState *)newState {
+    PBMLogDebug(@"mraid.onStateChange('%@');", newState)
     return [NSString stringWithFormat:@"mraid.onStateChange('%@');",newState];
 }
 
@@ -101,7 +104,7 @@ static NSString * const PBMMRAIDCommandFormatSize = @"%@:%@";
 + (nonnull NSString *)updateScreenSize:(CGSize)newScreenSize {
     NSString * width = [NSString stringWithFormat:PBMMRAIDCommandFormatSize, PBMMRAIDParseKeys.WIDTH, [PBMMRAIDJavascriptCommands formatFloat:newScreenSize.width]];
     NSString * height = [NSString stringWithFormat:PBMMRAIDCommandFormatSize, PBMMRAIDParseKeys.HEIGHT, [PBMMRAIDJavascriptCommands formatFloat:newScreenSize.height]];
-
+    PBMLogDebug(@"mraid.screenSize = {%@,%@};", width, height)
     return [NSString stringWithFormat:@"mraid.screenSize = {%@,%@};", width, height];
 }
 
