@@ -144,11 +144,15 @@ class ModalManager: NSObject, ModalViewControllerDelegate {
     }
     
     func dismissModalViewController(lastModalState: ModalState) {
+        // Fire before the dismiss animation so any pre-implant work (e.g. re-adding a
+        // web view to its original container) is already in place underneath the fading modal.
+        lastModalState.onStateWillPop?(lastModalState)
+
         dismissModalOnce(animated: true) { [weak self] in
             guard let self else {
                 return
             }
-            
+
             self.modalViewController = nil
             lastModalState.onStatePopFinished?(lastModalState)
         }

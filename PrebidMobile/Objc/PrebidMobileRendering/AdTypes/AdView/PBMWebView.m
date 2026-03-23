@@ -60,7 +60,7 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
 
 // viewability polling
 @property (nonatomic, strong, nullable) id<PBMCreativeViewabilityTracker> viewabilityTracker;
-@property (nonatomic, strong, nullable) NativoViewExposureChecker *nativoExposureChecker;
+@property (nonatomic, strong, nullable) NativoViewExposureChecker *exposureChecker;
 
 // the last frame sent to an ad via onSizeChange
 @property (nonatomic, assign) CGRect mraidLastSentFrame;
@@ -173,7 +173,7 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     if (self.isVolumeObserverSetup) {
         [[AVAudioSession sharedInstance] removeObserver:self forKeyPath:KeyPathOutputVolume];
     }
-    self.nativoExposureChecker = nil;
+    self.exposureChecker = nil;
     self.viewabilityTracker = nil;
 }
 
@@ -699,8 +699,21 @@ static PBMError *extracted(NSString *errorMessage) {
     if (self.viewabilityTracker != nil && self.exposureDelegate != nil && [self.exposureDelegate shouldCheckExposure]) {
         [self.viewabilityTracker checkExposureWithForce:YES];
     }
-    if (self.nativoExposureChecker != nil && self.exposureDelegate != nil && [self.exposureDelegate shouldCheckExposure]) {
-        id<PBMViewExposure> exposureNow = self.nativoExposureChecker.exposure;
+    if (self.exposureChecker != nil && self.exposureDelegate != nil && [self.exposureDelegate shouldCheckExposure]) {
+        id<PBMViewExposure> exposureNow = self.exposureChecker.exposure;
+        [self MRAID_onExposureChange:exposureNow];
+        if (self.exposureDelegate != nil) {
+            [self.exposureDelegate webView:self exposureChange:exposureNow];
+        }
+    }
+}
+
+- (void)forceExposureCheck {
+    if (self.viewabilityTracker != nil && self.exposureDelegate != nil && [self.exposureDelegate shouldCheckExposure]) {
+        [self.viewabilityTracker checkExposureWithForce:YES];
+    }
+    if (self.exposureChecker != nil && self.exposureDelegate != nil && [self.exposureDelegate shouldCheckExposure]) {
+        id<PBMViewExposure> exposureNow = self.exposureChecker.exposure;
         [self MRAID_onExposureChange:exposureNow];
         if (self.exposureDelegate != nil) {
             [self.exposureDelegate webView:self exposureChange:exposureNow];
@@ -866,7 +879,7 @@ static PBMError *extracted(NSString *errorMessage) {
 
 - (void)observeScrollForViewability {
     @weakify(self);
-    self.nativoExposureChecker = [[NativoViewExposureChecker alloc] initWithView:self onExposureChange:^(id<PBMViewExposure>  _Nonnull viewExposure, NSError *error) {
+    self.exposureChecker = [[NativoViewExposureChecker alloc] initWithView:self onExposureChange:^(id<PBMViewExposure>  _Nonnull viewExposure, NSError *error) {
         @strongify(self);
         if (!self) { return; }
         if (!error) {
