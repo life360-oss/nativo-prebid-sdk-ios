@@ -21,6 +21,7 @@
 #import "NSString+PBMExtensions.h"
 #import "UIView+PBMExtensions.h"
 #import "NSURL+PBMExtensions.h"
+#import "NativoUtils.h"
 
 #import "PBMFunctions+Private.h"
 #import "PBMMRAIDCommand.h"
@@ -355,6 +356,11 @@
         else {
             // MRAID one-part expand (Expanding existing content)
             self.isTwoPartExpand = NO;
+            
+            // Add snapshot image of ad to help transition between web view swaps
+            UIImageView *snapshotImage = [NativoUtils getViewAsImage:self.creative.view];
+            [self.creative.view.superview addSubview:snapshotImage];
+            
             @weakify(self);
             id<PBMModalState> pbmModalState = [PBMFactory createModalStateWithView:webView
                                                                    adConfiguration:self.creative.creativeModel.adConfiguration
@@ -362,10 +368,14 @@
                                                                 onStatePopFinished:^(id<PBMModalState> _Nonnull poppedState) {
                 @strongify(self);
                 if (!self) { return; }
-
                 [self modalManagerDidFinishPop:poppedState];
+                
+                // Remove snapshot
+                [snapshotImage removeFromSuperview];
+                
                 // Force an exposure check to keep state in sync
                 [self.prebidWebView forceExposureCheck];
+                
             } onStateHasLeftApp:^(id<PBMModalState> _Nonnull leavingState) {
                 @strongify(self);
                 if (!self) { return; }
@@ -373,9 +383,6 @@
                 [self modalManagerDidLeaveApp:leavingState];
             } nextOnStatePopFinished:nil nextOnStateHasLeftApp:nil onModalPushedBlock:nil];
 
-            // Re-implant the webview into its original banner container *before* the modal
-            // dismiss animation starts. This prevents a blank-frame blink caused by the
-            // container being empty while the modal is fading out.
             pbmModalState.onStateWillPop = ^(id<PBMModalState> _Nonnull poppedState) {
                 @strongify(self);
                 if (!self) { return; }
