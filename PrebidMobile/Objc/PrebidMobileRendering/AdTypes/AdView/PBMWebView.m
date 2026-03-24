@@ -96,6 +96,7 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     if (!(self = [super initWithFrame:frame])) {
         return nil;
     }
+    self.backgroundColor = [UIColor systemBackgroundColor];
     self.accessibilityIdentifier = PrebidConstants.ACCESSIBILITY_WEB_VIEW_LABEL;
     WKUserContentController * const wkUserContentController = [[WKUserContentController alloc] init];
     self.wkUserContentController = wkUserContentController;
@@ -130,7 +131,7 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
                     @"metaTag.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';"
                     @"headTag.appendChild(metaTag);"
                     @"var style = document.createElement('style');"
-                    @"style.innerHTML = 'body {margin:0px; padding:0px;}';"
+                    @"style.innerHTML = 'body {margin:0px; padding:0px; background-color:transparent;}';"
                     @"headTag.appendChild(style);";
     
     //Run JS
@@ -141,7 +142,12 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     configuration.userContentController = wkUserContentController;
     WKWebView * const internalWebView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
     [internalWebView setOpaque:NO];
-    
+    internalWebView.backgroundColor = [UIColor systemBackgroundColor];
+    internalWebView.scrollView.backgroundColor = [UIColor systemBackgroundColor];
+    if (@available(iOS 15.0, *)) {
+        internalWebView.underPageBackgroundColor = [UIColor systemBackgroundColor];
+    }
+
     _internalWebView = internalWebView;
     
     [internalWebView.scrollView setScrollEnabled:NO];
@@ -709,20 +715,22 @@ static PBMError *extracted(NSString *errorMessage) {
 }
 
 // Force exposure check to keep the MRAID state in sync.
-// Moving from Prebid's poll based tracking to Nativo scroll based tracking 
+// Runs synchronously on the calling thread so the viewable flag is
+// up-to-date immediately (e.g. before gating on webView.viewable).
+// Moving from Prebid's poll based tracking to Nativo scroll based tracking
 // means that MRAID_onExposureChange doesn't happen without user interaction anymore.
 // Instead we simply manually force the exposure check when needed.
 - (void)forceExposureCheck {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (self.viewabilityTracker != nil && self.exposureDelegate != nil) {
-            [self.viewabilityTracker checkExposureWithForce:YES];
-        }
-        if (self.exposureChecker != nil && self.exposureDelegate != nil) {
-            id<PBMViewExposure> exposureNow = self.exposureChecker.exposure;
-            [self MRAID_onExposureChange:exposureNow];
+    if (self.viewabilityTracker != nil) {
+        [self.viewabilityTracker checkExposureWithForce:YES];
+    }
+    if (self.exposureChecker != nil) {
+        id<PBMViewExposure> exposureNow = self.exposureChecker.exposure;
+        [self MRAID_onExposureChange:exposureNow];
+        if (self.exposureDelegate != nil) {
             [self.exposureDelegate webView:self exposureChange:exposureNow];
         }
-    });
+    }
 }
 
 // updates the state of the webview in mraid.js

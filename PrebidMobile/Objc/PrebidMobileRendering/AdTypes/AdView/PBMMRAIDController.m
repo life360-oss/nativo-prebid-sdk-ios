@@ -132,6 +132,11 @@
         return;
     }
     
+    // Refresh viewability synchronously before checking. Scroll-based
+    // tracking can leave a stale viewable=NO after tab switches since
+    // no scroll event fires when the view re-enters the hierarchy.
+    [webView forceExposureCheck];
+
     if (!webView.viewable) {
         NSString *message = [NSString stringWithFormat:@"MRAID COMMAND: %@ not usable, PBMWebView is not viewable)", command];
         @throw [NSException pbmException:message];

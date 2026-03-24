@@ -256,6 +256,18 @@ class ModalManager: NSObject, ModalViewControllerDelegate {
                 }
                 
                 self.delegate?.modalManagerWillPresentModal()
+                // Hide content for full-screen modals during the presentation
+                // animation, then fade it in once the modal is fully on screen.
+                let shouldHideContent = !(modalViewController is NonModalViewController)
+                if shouldHideContent {
+                    modalViewController.contentView?.alpha = 0
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                        UIView.animate(withDuration: 0.2) {
+                            modalViewController.contentView?.alpha = 1
+                        }
+                    }
+                }
                 fromRootViewController.present(modalViewController, animated: animated)
             }
             
