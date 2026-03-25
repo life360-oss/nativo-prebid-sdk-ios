@@ -36,10 +36,6 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
         displayView.interactionDelegate = interactionDelegate
         displayView.loadingDelegate = self
         
-        // Cache debug mraid.js
-//        let jsLibManager = PrebidJSLibraryManager.shared
-//        PrebidJSLibraryManager.shared.saveLibrary(with: jsLibManager.mraidLibrary.name, contents: mraidDebugScript)
-        
         return displayView
     }
     
@@ -67,17 +63,31 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
             return
         }
         
-        // Differenciate between Nativo ad rendering or a standard banner ad
         let bid = prebidDisplayView.bid
-        let adm = bid.adm ?? ""
-        let isNativoRendering = adm.range(of: "load.js", options: .caseInsensitive) != nil
-        
-        if (isNativoRendering) {
-            DispatchQueue.main.async {
-                self.expandFullWidth(bannerView)
-                self.expandFullHeight(bannerView)
-                self.expandChildren(view, to: bannerView, withMinimum:bid.size.height)
-            }
+        if (shouldRenderForBid(from: bid)) {
+            renderNativoAd(prebidDisplayView, into: bannerView, with: bid)
+        }
+    }
+    
+    // Differenciate between Nativo ad rendering or a standard banner ad
+    private func shouldRenderForBid(from bid: Bid) -> Bool {
+        if let adType = bid.bid.ext?.nativo?.nativoAdType {
+            // Only avoid Nativo rendering for standard display;
+            // render for all other Nativo types
+            return adType != .standardDisplay
+        } else {
+            // fallback
+            let adm = bid.adm ?? ""
+            let isNativoRendering = adm.range(of: "load.js", options: .caseInsensitive) != nil
+            return isNativoRendering
+        }
+    }
+    
+    private func renderNativoAd(_ view: UIView, into bannerView: UIView, with bid: Bid) {
+        DispatchQueue.main.async {
+            self.expandFullWidth(bannerView)
+            self.expandFullHeight(bannerView)
+            self.expandChildren(view, to: bannerView, withMinimum:bid.size.height)
         }
     }
     
