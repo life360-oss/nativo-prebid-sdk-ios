@@ -96,7 +96,7 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     if (!(self = [super initWithFrame:frame])) {
         return nil;
     }
-    self.backgroundColor = [UIColor systemBackgroundColor];
+    self.backgroundColor = [UIColor clearColor];
     self.accessibilityIdentifier = PrebidConstants.ACCESSIBILITY_WEB_VIEW_LABEL;
     WKUserContentController * const wkUserContentController = [[WKUserContentController alloc] init];
     self.wkUserContentController = wkUserContentController;
@@ -142,8 +142,8 @@ static NSString * const KeyPathOutputVolume = @"outputVolume";
     configuration.userContentController = wkUserContentController;
     WKWebView * const internalWebView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
     [internalWebView setOpaque:NO];
-    internalWebView.backgroundColor = [UIColor systemBackgroundColor];
-    internalWebView.scrollView.backgroundColor = [UIColor systemBackgroundColor];
+    internalWebView.backgroundColor = [UIColor clearColor];
+    internalWebView.scrollView.backgroundColor = [UIColor clearColor];
     if (@available(iOS 15.0, *)) {
         internalWebView.underPageBackgroundColor = [UIColor systemBackgroundColor];
     }
