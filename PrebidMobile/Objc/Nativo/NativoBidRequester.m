@@ -4,6 +4,7 @@
 #import "PBMPrebidParameterBuilder.h"
 #import "PBMParameterBuilderService.h"
 #import "NativoParameterBuilder.h"
+#import "NativoGeoLocationParameterBuilder.h"
 #import "Log+Extensions.h"
 #import "SwiftImport.h"
 #import "PBMMacros.h"
@@ -95,10 +96,13 @@
     
     // this will add tagid and any other needed params for Nativo
     NativoParameterBuilder * nativoParamsBuilder = [[NativoParameterBuilder alloc] initWithAdConfiguration:self.adUnitConfiguration];
+    
+    // Add geo location if opted in
+    NativoGeoLocationParameterBuilder *geoBuilder = [[NativoGeoLocationParameterBuilder alloc] initWithLocationManager:PBMLocationManager.shared];
 
     NSDictionary<NSString *, NSString *> * const params =
     [PBMParameterBuilderService buildParamsDictWithAdConfiguration:self.adUnitConfiguration.adConfiguration
-                                           extraParameterBuilders:@[prebidParamsBuilder, nativoParamsBuilder]];
+                                           extraParameterBuilders:@[prebidParamsBuilder, nativoParamsBuilder, geoBuilder]];
 
     return params[@"openrtb"] ?: @"";
 }
