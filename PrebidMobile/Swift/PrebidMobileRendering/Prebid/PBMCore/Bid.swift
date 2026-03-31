@@ -46,6 +46,12 @@ public class Bid: NSObject {
     /// if markup is included in both.
     /// Substitution macros (Section 4.4) may be included.
     public private(set) var adm: String?
+
+    /// GAM proxy banner view for click URL extraction. Weak to avoid retain cycles.
+    public weak var gamProxyBannerView: UIView?
+
+    /// Cached GAM click URL — extracted once, reused on subsequent clicks.
+    public var gamClickURL: URL?
     
     /// Ad size
     public var size: CGSize {

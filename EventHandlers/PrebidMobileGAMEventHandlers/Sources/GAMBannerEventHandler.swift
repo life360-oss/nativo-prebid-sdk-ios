@@ -62,6 +62,11 @@ public class GAMBannerEventHandler :
     public func trackImpression() {
         proxyBanner?.recordImpression()
     }
+
+    public func trackClick() {
+        guard let bid = bidResponse?.allBids?.first else { return }
+        NativoGAMClickFetcher.extractAndFire(for: bid)
+    }
     
     public func requestAd(with bidResponse: BidResponse?) {
         self.bidResponse = bidResponse
@@ -233,6 +238,14 @@ public class GAMBannerEventHandler :
             
             proxyBanner = banner
             
+
+            // Store proxy banner on bids so click URL can be extracted on ad click
+            if let bannerView = banner?.banner, let bids = bidResponse?.allBids {
+                for bid in bids {
+                    bid.gamProxyBannerView = bannerView
+                }
+            }
+
             loadingDelegate?.sdkDidWin(bidResponse)
         }
     }

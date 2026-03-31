@@ -312,10 +312,12 @@ public class BannerView:
     }
     
     public func didLeaveApp(from displayView: UIView) {
+        eventHandler?.trackClick()
         willLeaveApp()
     }
-    
+
     public func willPresentModal(from displayView: UIView) {
+        eventHandler?.trackClick()
         willPresentModal()
     }
     
