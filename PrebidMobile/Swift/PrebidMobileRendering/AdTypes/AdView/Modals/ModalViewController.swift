@@ -114,6 +114,7 @@ public class ModalViewController: UIViewController {
 
         self.interstitialLayout = modalState.displayProperties?.interstitialLayout ?? .undefined
         self.modalState = modalState
+        view.backgroundColor = modalState.displayProperties?.modalBackgroundColor
 
         if self.interstitialLayout == .undefined {
             self.isRotationEnabled = modalState.isRotationEnabled

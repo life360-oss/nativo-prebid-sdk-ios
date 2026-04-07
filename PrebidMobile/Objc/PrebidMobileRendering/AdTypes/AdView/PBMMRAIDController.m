@@ -56,6 +56,8 @@
 @property (nonatomic, copy, nullable) PBMVoidBlock dismissExpandedModalState;
 @property (nonatomic, copy, nullable) PBMVoidBlock dismissResizedModalState;
 
+@property (nonatomic, strong) PBMInterstitialDisplayProperties *interstitialDisplayProperties;
+
 //See the par. 3.1.4 https://www.iab.com/wp-content/uploads/2017/07/MRAID_3.0_FINAL.pdf
 //A new state (via sending changeState) must be set
 //only *AFTER* the exposureChange event
@@ -108,6 +110,14 @@
         self.mraidState = PBMMRAIDState.defaultState;
         self.delayedMraidState = PBMMRAIDState.notEnabled;
         self.playingMRAIDVideo = NO;
+
+        // Grab interstitial display properties from the owning DisplayView if possible
+        if ([creativeViewDelegate respondsToSelector:@selector(adViewManagerDelegate)]) {
+            id<PBMAdViewManagerDelegate> adViewManagerDelegate = [(id)creativeViewDelegate adViewManagerDelegate];
+            self.interstitialDisplayProperties = adViewManagerDelegate.interstitialDisplayProperties ?: [PBMInterstitialDisplayProperties new];
+        } else {
+            self.interstitialDisplayProperties = [PBMInterstitialDisplayProperties new];
+        }
     }
     return self;
 }
@@ -299,8 +309,8 @@
         @throw [NSException pbmException:[NSString stringWithFormat:@"MRAID cannot expand from state: %@", mraidState]];
     }
     
-    PBMInterstitialDisplayProperties *displayProperties = [PBMInterstitialDisplayProperties new];
-    
+    PBMInterstitialDisplayProperties *displayProperties = self.interstitialDisplayProperties;
+
     @weakify(self);
     [webView MRAID_getExpandProperties:^(PBMMRAIDExpandProperties * _Nullable expandProperties) {
         @strongify(self);
@@ -445,7 +455,7 @@
             return;
         }
         
-        PBMInterstitialDisplayProperties *displayProperties = [PBMInterstitialDisplayProperties new];
+        PBMInterstitialDisplayProperties *displayProperties = [self.interstitialDisplayProperties copy];
         //Make the close button invisible but still tappable.
         [displayProperties setButtonImageHidden];
         
@@ -624,7 +634,7 @@
             
             id<PBMModalState> state = [PBMFactory createModalStateWithView:containerView
                                                            adConfiguration:self.creative.creativeModel.adConfiguration
-                                                         displayProperties:[PBMInterstitialDisplayProperties new]
+                                                         displayProperties:self.interstitialDisplayProperties
                                                         onStatePopFinished:^(id<PBMModalState> _Nonnull poppedState) {
                 @strongify(self);
                 if (!self) { return; }

@@ -83,11 +83,12 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
         }
     }
     
-    private func renderNativoAd(_ view: UIView, into bannerView: UIView, with bid: Bid) {
+    private func renderNativoAd(_ displayView: DisplayView, into bannerView: UIView, with bid: Bid) {
         DispatchQueue.main.async {
             self.expandFullWidth(bannerView)
             self.expandFullHeight(bannerView)
-            self.expandChildren(view, to: bannerView, withMinimum:bid.size.height)
+            self.expandChildren(displayView, to: bannerView, withMinimum:bid.size.height)
+            self.setModalBackground(bid: bid, displayView: displayView)
         }
     }
     
@@ -103,6 +104,14 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
     }
     
     // MARK: - Private functions
+    
+    private func setModalBackground(bid: Bid, displayView: DisplayView) {
+        if bid.nativoAdType == .story
+            || bid.nativoAdType == .ctpVideo
+            || bid.nativoAdType == .stpVideo {
+            displayView.interstitialDisplayProperties.modalBackgroundColor = .black
+        }
+    }
     
     private func expandFullWidth(_ view: UIView) {
         if let parentView = view.superview {
