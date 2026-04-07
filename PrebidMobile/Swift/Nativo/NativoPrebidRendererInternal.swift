@@ -71,7 +71,7 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
     
     // Differenciate between Nativo ad rendering or a standard banner ad
     private func shouldRenderForBid(from bid: Bid) -> Bool {
-        if let adType = bid.bid.ext?.nativo?.nativoAdType {
+        if let adType = bid.nativoAdType {
             // Only avoid Nativo rendering for standard display;
             // render for all other Nativo types
             return adType != .standardDisplay
@@ -171,4 +171,6 @@ public class NativoPrebidRendererInternal: NSObject, PrebidMobilePluginRenderer,
         }
     }
 }
+
+
 
